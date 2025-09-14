@@ -71,3 +71,17 @@ elif choice == "Visualize Spending":
         ax.set_ylabel("Total Spent")
         ax.set_title("Spending by Category")
         st.pyplot(fig)
+
+> Replace `nimisha202900-web` with your GitHub username.
+
+---
+
+### **Step 5: Push to GitHub**
+
+```bash
+git init
+git add .
+git commit -m "Initial commit: Expense Tracker Streamlit App"
+git branch -M main
+git remote add origin https://github.com/<your-username>/expense-tracker.git
+git push -u origin main
