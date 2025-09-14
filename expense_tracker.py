@@ -1,145 +1,98 @@
-{
-  "nbformat": 4,
-  "nbformat_minor": 0,
-  "metadata": {
-    "colab": {
-      "provenance": [],
-      "authorship_tag": "ABX9TyPjI/oYElY/TOpIagsQNRu2",
-      "include_colab_link": true
-    },
-    "kernelspec": {
-      "name": "python3",
-      "display_name": "Python 3"
-    },
-    "language_info": {
-      "name": "python"
-    }
-  },
-  "cells": [
-    {
-      "cell_type": "markdown",
-      "metadata": {
-        "id": "view-in-github",
-        "colab_type": "text"
-      },
-      "source": [
-        "<a href=\"https://colab.research.google.com/github/nimisha202900-web/expense_trackerfinal/blob/main/expense_tracker.py\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
-      ]
-    },
-    {
-      "cell_type": "code",
-      "execution_count": null,
-      "metadata": {
-        "id": "2Fztf-euCarN"
-      },
-      "outputs": [],
-      "source": [
-        "# ===============================\n",
-        "# 1. Setup\n",
-        "# ===============================\n",
-        "import sqlite3\n",
-        "import pandas as pd\n",
-        "import matplotlib.pyplot as plt\n",
-        "from datetime import datetime\n",
-        "import numpy as np\n",
-        "\n",
-        "# Create DB\n",
-        "conn = sqlite3.connect(\"expenses.db\")\n",
-        "cur = conn.cursor()\n",
-        "\n",
-        "# Create Table\n",
-        "cur.execute(\"\"\"\n",
-        "CREATE TABLE IF NOT EXISTS Expenses (\n",
-        "    expense_id INTEGER PRIMARY KEY,\n",
-        "    date TEXT,\n",
-        "    category TEXT,\n",
-        "    amount REAL,\n",
-        "    note TEXT\n",
-        ")\n",
-        "\"\"\")\n",
-        "conn.commit()\n",
-        "\n",
-        "# ===============================\n",
-        "# 2. Calculator-like Input\n",
-        "# ===============================\n",
-        "def add_expense():\n",
-        "    print(\"\\n💰 Add New Expense Entry\")\n",
-        "    date = input(\"Enter date (YYYY-MM-DD) or press Enter for today: \")\n",
-        "    if not date:\n",
-        "        date = datetime.now().strftime(\"%Y-%m-%d\")\n",
-        "\n",
-        "    category = input(\"Enter category (Food, Rent, Travel, Shopping, Other): \")\n",
-        "    amount = float(input(\"Enter amount: ₹ \"))\n",
-        "    note = input(\"Enter note (optional): \")\n",
-        "\n",
-        "    cur.execute(\"INSERT INTO Expenses (date, category, amount, note) VALUES (?, ?, ?, ?)\",\n",
-        "                (date, category, amount, note))\n",
-        "    conn.commit()\n",
-        "    print(\"✅ Expense added successfully!\\n\")\n",
-        "\n",
-        "# Add expenses interactively\n",
-        "while True:\n",
-        "    choice = input(\"Do you want to add an expense? (y/n): \").lower()\n",
-        "    if choice == \"y\":\n",
-        "        add_expense()\n",
-        "    else:\n",
-        "        break\n",
-        "\n",
-        "# ===============================\n",
-        "# 3. Queries\n",
-        "# ===============================\n",
-        "\n",
-        "# Total Monthly Expenses\n",
-        "query_monthly = \"\"\"\n",
-        "SELECT strftime('%Y-%m', date) AS month, SUM(amount) as total\n",
-        "FROM Expenses\n",
-        "WHERE date IS NOT NULL -- Add this condition to filter out NULL dates\n",
-        "GROUP BY month\n",
-        "ORDER BY month\n",
-        "\"\"\"\n",
-        "monthly_expenses = pd.read_sql(query_monthly, conn)\n",
-        "print(\"\\n📊 Total Monthly Expenses:\\n\", monthly_expenses)\n",
-        "\n",
-        "# Top 3 Categories\n",
-        "query_top3 = \"\"\"\n",
-        "SELECT category, SUM(amount) as total\n",
-        "FROM Expenses\n",
-        "GROUP BY category\n",
-        "ORDER BY total DESC\n",
-        "LIMIT 3\n",
-        "\"\"\"\n",
-        "top3_categories = pd.read_sql(query_top3, conn)\n",
-        "print(\"\\n🔥 Top 3 Spending Categories:\\n\", top3_categories)\n",
-        "\n",
-        "# Average Daily Spend\n",
-        "query_avg = \"\"\"\n",
-        "SELECT AVG(daily_total) as avg_daily_spend\n",
-        "FROM (\n",
-        "    SELECT date, SUM(amount) as daily_total\n",
-        "    FROM Expenses\n",
-        "    GROUP BY date\n",
-        ")\n",
-        "\"\"\"\n",
-        "avg_daily = pd.read_sql(query_avg, conn)\n",
-        "print(\"\\n💵 Average Daily Spend:\\n\", avg_daily)\n",
-        "\n",
-        "# ===============================\n",
-        "# 4. Visualization (Fixed)\n",
-        "# ===============================\n",
-        "if not monthly_expenses.empty:\n",
-        "    # Ensure \"month\" is string (for x-axis labels)\n",
-        "    monthly_expenses[\"month\"] = monthly_expenses[\"month\"].astype(str)\n",
-        "\n",
-        "    plt.figure(figsize=(8,5))\n",
-        "    plt.bar(monthly_expenses[\"month\"], monthly_expenses[\"total\"], color=\"teal\")\n",
-        "    plt.title(\"Monthly Expense Trend\")\n",
-        "    plt.xlabel(\"Month\")\n",
-        "    plt.ylabel(\"Total Expenses (₹)\")\n",
-        "    plt.xticks(rotation=45)\n",
-        "    plt.show()\n",
-        "else:\n",
-        "    print(\"\\n(No expenses recorded yet for visualization.)\")\n"
-      ]
-    }
-  ]
-}
+import sqlite3
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+from datetime import datetime
+
+# ----------------------------
+# Database setup
+# ----------------------------
+conn = sqlite3.connect("expenses.db", check_same_thread=False)
+cursor = conn.cursor()
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS expenses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT,
+    category TEXT,
+    amount REAL,
+    note TEXT
+)
+""")
+conn.commit()
+
+# ----------------------------
+# Streamlit UI
+# ----------------------------
+st.title("💰 Simple Expense Tracker")
+
+menu = ["Add Expense", "View Summary", "Visualize Spending"]
+choice = st.sidebar.radio("Menu", menu)
+
+# ----------------------------
+# Add Expense
+# ----------------------------
+if choice == "Add Expense":
+    st.subheader("➕ Add a New Expense")
+
+    date = st.date_input("Date", datetime.today())
+    category = st.selectbox("Category", ["Food", "Transport", "Rent", "Shopping", "Bills", "Other"])
+    amount = st.number_input("Amount", min_value=0.0, step=0.01)
+    note = st.text_area("Note (optional)")
+
+    if st.button("Save Expense"):
+        cursor.execute("INSERT INTO expenses (date, category, amount, note) VALUES (?, ?, ?, ?)",
+                       (date.strftime("%Y-%m-%d"), category, amount, note))
+        conn.commit()
+        st.success("✅ Expense saved successfully!")
+
+# ----------------------------
+# View Summary
+# ----------------------------
+elif choice == "View Summary":
+    st.subheader("📊 Expense Summary")
+
+    df = pd.read_sql("SELECT * FROM expenses", conn)
+
+    if df.empty:
+        st.warning("No expenses recorded yet.")
+    else:
+        st.dataframe(df)
+
+        # Monthly total
+        df["date"] = pd.to_datetime(df["date"])
+        df["month"] = df["date"].dt.to_period("M")
+        monthly_total = df.groupby("month")["amount"].sum().reset_index()
+
+        st.write("### Monthly Expenses")
+        st.table(monthly_total)
+
+        # Top categories
+        top_categories = df.groupby("category")["amount"].sum().sort_values(ascending=False).head(3)
+        st.write("### Top 3 Spending Categories")
+        st.table(top_categories)
+
+        # Average daily spend
+        avg_daily = df.groupby("date")["amount"].sum().mean()
+        st.write(f"### Average Daily Spend: **₹{avg_daily:.2f}**")
+
+# ----------------------------
+# Visualize Spending
+# ----------------------------
+elif choice == "Visualize Spending":
+    st.subheader("📈 Spending Visualization")
+
+    df = pd.read_sql("SELECT * FROM expenses", conn)
+
+    if df.empty:
+        st.warning("No data to visualize.")
+    else:
+        category_summary = df.groupby("category")["amount"].sum().reset_index()
+
+        fig, ax = plt.subplots()
+        ax.bar(category_summary["category"], category_summary["amount"])
+        ax.set_xlabel("Category")
+        ax.set_ylabel("Total Spent")
+        ax.set_title("Spending by Category")
+
+        st.pyplot(fig)
