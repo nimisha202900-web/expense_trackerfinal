@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
-pip install matplotlib pandas streamlit
+
 
 # Database setup
 conn = sqlite3.connect("expenses.db", check_same_thread=False)
